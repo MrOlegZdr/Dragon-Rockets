@@ -4,6 +4,7 @@ public class Rocket {
 
 	private final String name;
 	private RocketStatus status;
+	private String assignedMissionName;
 
 	public Rocket(String name) {
 		this.name = name;
@@ -22,8 +23,17 @@ public class Rocket {
 		this.status = status;
 	}
 
+	public String getAssignedMissionName() {
+		return assignedMissionName;
+	}
+
+	public void setAssignedMissionName(String assignedMissionName) {
+		this.assignedMissionName = assignedMissionName;
+	}
+
 	@Override
 	public String toString() {
-		return "Rocket [name=" + name + ", status=" + status + "]";
+		return "Rocket [name=" + name + ", status=" + status + ", assignedMissionName=" + assignedMissionName + "]";
 	}
+
 }
