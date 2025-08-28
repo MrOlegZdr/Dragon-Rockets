@@ -44,4 +44,52 @@ class MissionRepositoryTest {
 
 		assertEquals("Mission with name '" + missionName + "' already exists.", thrown.getMessage());
 	}
+
+	@Test
+	void shouldFindMissionByName() {
+		String missionName = "Mars";
+		missionRepository.addMission(new Mission(missionName));
+
+		Optional<Mission> foundMission = missionRepository.findByName(missionName);
+		assertTrue(foundMission.isPresent());
+		assertEquals(missionName, foundMission.get().getName());
+	}
+
+	@Test
+	void shouldNotFindNonexistentMission() {
+		String missionName = "Mars";
+		String nonExistentName = "Jupiter";
+		missionRepository.addMission(new Mission(missionName));
+
+		Optional<Mission> foundMission = missionRepository.findByName(nonExistentName);
+		assertTrue(foundMission.isEmpty());
+	}
+
+	@Test
+	void shouldRemoveMissionSuccessfully() {
+		// Given: a mission exists in the repository
+		String missionName = "Mars";
+		missionRepository.addMission(new Mission(missionName));
+		assertTrue(missionRepository.findByName(missionName).isPresent());
+
+		// When: removing the mission
+		missionRepository.remove(missionName);
+
+		// Then: the mission should no longer be found
+		assertTrue(missionRepository.findByName(missionName).isEmpty());
+	}
+
+	@Test
+	void shouldNotThrowExceptionWhenRemovingNonexistentMission() {
+		// Given: a nonexistent mission name
+		String nonExistentName = "Nonexistent Mission";
+		String existentName = "Mars";
+		missionRepository.addMission(new Mission(existentName));
+		assertTrue(missionRepository.findByName(existentName).isPresent());
+		assertFalse(missionRepository.findByName(nonExistentName).isPresent());
+
+		// When: attempting to remove it
+		// Then: no exception should be thrown
+		assertDoesNotThrow(() -> missionRepository.remove(nonExistentName));
+	}
 }

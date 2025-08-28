@@ -1,6 +1,8 @@
 package com.home.project.dragonrockets.repository;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -19,5 +21,13 @@ public class MissionRepository {
 
 	public Optional<Mission> findByName(String name) {
 		return Optional.ofNullable(missions.get(name));
+	}
+
+	public List<Mission> findAll() {
+		return new ArrayList<>(missions.values());
+	}
+
+	public void remove(String name) {
+		missions.remove(name);
 	}
 }

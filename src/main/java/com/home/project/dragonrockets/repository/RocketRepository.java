@@ -20,4 +20,8 @@ public class RocketRepository {
 	public Optional<Rocket> findByName(String name) {
 		return Optional.ofNullable(rockets.get(name));
 	}
+
+	public void remove(String name) {
+		rockets.remove(name);
+	}
 }

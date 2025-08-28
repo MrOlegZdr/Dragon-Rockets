@@ -1,6 +1,10 @@
 package com.home.project.dragonrockets.repository;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import com.home.project.dragonrockets.model.Mission;
 import com.home.project.dragonrockets.model.MissionStatus;
@@ -43,14 +47,28 @@ public class SpaceXRepository {
 		// Assign the rocket to the mission
 		mission.getAssignedRockets().add(rocket);
 
-		// Update rocket status and mission link
-		rocket.setStatus(RocketStatus.IN_SPACE);
+		// Update rocket's mission link
 		rocket.setAssignedMissionName(missionName);
+	}
 
-		// Update mission status
-		if (mission.getStatus() == MissionStatus.SCHEDULED) {
-			mission.setStatus(MissionStatus.IN_PROGRESS);
+	public void unassignRocketFromMission(String rocketName) {
+		Rocket rocket = rocketRepository.findByName(rocketName)
+				.orElseThrow(() -> new IllegalArgumentException("Rocket '" + rocketName + "' not found."));
+
+		if (rocket.getAssignedMissionName() == null) {
+			throw new IllegalArgumentException("Rocket '" + rocketName + "' is not assigned to any mission.");
 		}
+
+		Mission mission = missionRepository.findByName(rocket.getAssignedMissionName())
+				.orElseThrow(() -> new IllegalStateException(
+						"Assigned mission '" + rocket.getAssignedMissionName() + "' not found."));
+
+		// Remove the rocket from the mission's list
+		mission.getAssignedRockets().remove(rocket);
+
+		// Reset rocket's state
+		rocket.setAssignedMissionName(null);
+		rocket.setStatus(RocketStatus.ON_GROUND);
 	}
 
 	public void changeRocketStatus(String rocketName, RocketStatus newStatus) {
@@ -100,17 +118,60 @@ public class SpaceXRepository {
 				}
 				break;
 			case ENDED:
-				boolean hasAssignedRockets = !mission.getAssignedRockets().isEmpty();
-				boolean areAllRocketsOnGround = mission.getAssignedRockets().stream()
-						.allMatch(r -> r.getStatus() == RocketStatus.ON_GROUND);
-				if (hasAssignedRockets && !areAllRocketsOnGround) {
+				if (!mission.getAssignedRockets().isEmpty()) {
 					throw new IllegalArgumentException(
-							"Cannot change mission status to 'Ended' because some rockets are still assigned or not on ground.");
+							"Cannot change mission status to 'Ended' because rockets are still assigned. Please unassign all rockets first.");
 				}
 				break;
 		}
 
 		mission.setStatus(newStatus);
+	}
+
+	public List<String> getMissionSummary() {
+		return missionRepository.findAll().stream()
+				.sorted(Comparator.comparingInt((Mission m) -> m.getAssignedRockets().size()).reversed()
+						.thenComparing(Mission::getName, Comparator.reverseOrder()))
+				.flatMap(mission -> {
+					String header = String.format("%s - %s - Dragons: %d",
+							mission.getName(),
+							mission.getStatus(),
+							mission.getAssignedRockets().size());
+
+					List<String> lines = new ArrayList<>();
+					lines.add(header);
+
+					mission.getAssignedRockets().stream()
+							.map(rocket -> String.format("\t- %s - %s", rocket.getName(), rocket.getStatus()))
+							.forEach(lines::add);
+
+					return lines.stream();
+				})
+				.collect(Collectors.toList());
+	}
+
+	public void removeRocket(String rocketName) {
+		Rocket rocket = rocketRepository.findByName(rocketName)
+				.orElseThrow(() -> new IllegalArgumentException("Rocket '" + rocketName + "' not found."));
+
+		if (rocket.getAssignedMissionName() != null) {
+			throw new IllegalArgumentException("Cannot remove rocket '" + rocketName
+					+ "' as it is currently assigned to mission '" + rocket.getAssignedMissionName() + "'.");
+		}
+
+		rocketRepository.remove(rocketName);
+	}
+
+	public void removeMission(String missionName) {
+		Mission mission = missionRepository.findByName(missionName)
+				.orElseThrow(() -> new IllegalArgumentException("Mission '" + missionName + "' not found."));
+
+		if (!mission.getAssignedRockets().isEmpty()) {
+			throw new IllegalArgumentException(
+					"Cannot remove mission '" + missionName + "' as it has assigned rockets.");
+		}
+
+		missionRepository.remove(missionName);
 	}
 
 	private void updateMissionStatusBasedOnRockets(Mission mission) {
@@ -120,12 +181,6 @@ public class SpaceXRepository {
 
 		if (rocketsInRepair > 0) {
 			mission.setStatus(MissionStatus.PENDING);
-		} else if (mission.getAssignedRockets().stream().anyMatch(r -> r.getStatus() == RocketStatus.IN_SPACE)) {
-			mission.setStatus(MissionStatus.IN_PROGRESS);
-		} else if (mission.getAssignedRockets().stream().allMatch(r -> r.getStatus() == RocketStatus.ON_GROUND)
-				|| mission.getAssignedRockets().isEmpty()) {
-			mission.setStatus(MissionStatus.SCHEDULED);
 		}
 	}
-
 }

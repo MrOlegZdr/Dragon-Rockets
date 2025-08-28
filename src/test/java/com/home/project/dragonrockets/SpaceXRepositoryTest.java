@@ -2,6 +2,7 @@ package com.home.project.dragonrockets;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -44,7 +45,7 @@ class SpaceXRepositoryTest {
 		assertTrue(assignedRocketOptional.isPresent());
 
 		Rocket assignedRocket = assignedRocketOptional.get();
-		assertEquals(RocketStatus.IN_SPACE, assignedRocket.getStatus());
+		assertEquals(RocketStatus.ON_GROUND, assignedRocket.getStatus());
 		assertEquals(missionName, assignedRocket.getAssignedMissionName());
 
 		Optional<Mission> updatedMissionOptional = missionRepository.findByName(missionName);
@@ -52,8 +53,8 @@ class SpaceXRepositoryTest {
 
 		Mission updatedMission = updatedMissionOptional.get();
 		assertEquals(1, updatedMission.getAssignedRockets().size());
-		assertEquals(RocketStatus.IN_SPACE, updatedMission.getAssignedRockets().get(0).getStatus());
-		assertEquals(MissionStatus.IN_PROGRESS, updatedMission.getStatus());
+		assertEquals(RocketStatus.ON_GROUND, updatedMission.getAssignedRockets().get(0).getStatus());
+		assertEquals(MissionStatus.SCHEDULED, updatedMission.getStatus());
 	}
 
 	@Test
@@ -91,6 +92,45 @@ class SpaceXRepositoryTest {
 				IllegalArgumentException.class,
 				() -> spaceXRepository.assignRocketToMission(rocketName, missionName));
 		assertEquals("Cannot assign rockets to a mission with status 'Ended'.", thrown.getMessage());
+	}
+
+	@Test
+	void shouldUnassignRocketFromMissionSuccessfully() {
+		// Given: a rocket assigned to a mission
+		String rocketName = "Dragon 1";
+		String missionName = "Mars";
+		rocketRepository.addRocket(new Rocket(rocketName));
+		missionRepository.addMission(new Mission(missionName));
+		spaceXRepository.assignRocketToMission(rocketName, missionName);
+
+		// When: un-assigning the rocket
+		spaceXRepository.unassignRocketFromMission(rocketName);
+
+		// Then: the rocket should be unassigned and its status should be ON_GROUND
+		Optional<Rocket> unassignedRocketOptional = rocketRepository.findByName(rocketName);
+		assertTrue(unassignedRocketOptional.isPresent());
+		Rocket unassignedRocket = unassignedRocketOptional.get();
+		assertNull(unassignedRocket.getAssignedMissionName());
+		assertEquals(RocketStatus.ON_GROUND, unassignedRocket.getStatus());
+
+		Optional<Mission> missionOptional = missionRepository.findByName(missionName);
+		assertTrue(missionOptional.isPresent());
+		Mission mission = missionOptional.get();
+		assertNotNull(mission);
+		assertEquals(0, mission.getAssignedRockets().size());
+	}
+
+	@Test
+	void shouldThrowExceptionWhenUnassigningRocketNotAssignedToAnyMission() {
+		// Given: a rocket not assigned to any mission
+		String rocketName = "Falcon Heavy";
+		rocketRepository.addRocket(new Rocket(rocketName));
+
+		// When & Then: attempting to un-assign it, an exception should be thrown
+		IllegalArgumentException thrown = assertThrows(
+				IllegalArgumentException.class,
+				() -> spaceXRepository.unassignRocketFromMission(rocketName));
+		assertEquals("Rocket 'Falcon Heavy' is not assigned to any mission.", thrown.getMessage());
 	}
 
 	@Test
@@ -202,7 +242,7 @@ class SpaceXRepositoryTest {
 				IllegalArgumentException.class,
 				() -> spaceXRepository.changeMissionStatus(missionName, MissionStatus.ENDED));
 		assertEquals(
-				"Cannot change mission status to 'Ended' because some rockets are still assigned or not on ground.",
+				"Cannot change mission status to 'Ended' because rockets are still assigned. Please unassign all rockets first.",
 				thrown.getMessage());
 	}
 
@@ -229,27 +269,20 @@ class SpaceXRepositoryTest {
 	}
 
 	@Test
-	void shouldChangeMissionStatusToEndedWhenAllRocketsAreOnGround() {
-		// Given: a mission with assigned rockets that are all 'ON_GROUND'
-		String missionName = "Jupiter";
-		String rocket1Name = "Dragon 1";
-		String rocket2Name = "Dragon 2";
+	void shouldAllowMissionToEndAfterUnassigningAllRockets() {
+		// Given: a mission with one assigned rocket
+		String missionName = "Moon Landing";
+		String rocketName = "Starship 1";
+		rocketRepository.addRocket(new Rocket(rocketName));
 		missionRepository.addMission(new Mission(missionName));
-		rocketRepository.addRocket(new Rocket(rocket1Name));
-		rocketRepository.addRocket(new Rocket(rocket2Name));
-		spaceXRepository.assignRocketToMission(rocket1Name, missionName);
-		spaceXRepository.assignRocketToMission(rocket2Name, missionName);
+		spaceXRepository.assignRocketToMission(rocketName, missionName);
 
-		// Simulating the end of the mission, returning rockets to "ON_GROUND"
-		spaceXRepository.changeRocketStatus(rocket1Name, RocketStatus.ON_GROUND);
-		spaceXRepository.changeRocketStatus(rocket2Name, RocketStatus.ON_GROUND);
-
-		// When: changing its status to ENDED
+		// When: un-assigning the last rocket and then changing mission status to Ended
+		spaceXRepository.unassignRocketFromMission(rocketName);
 		spaceXRepository.changeMissionStatus(missionName, MissionStatus.ENDED);
 
-		// Then: the status should be updated
+		// Then: the mission status should be updated successfully
 		Optional<Mission> updatedMissionOptional = missionRepository.findByName(missionName);
-		assertTrue(updatedMissionOptional.isPresent());
 		Mission updatedMission = updatedMissionOptional.get();
 		assertNotNull(updatedMission);
 		assertEquals(MissionStatus.ENDED, updatedMission.getStatus());
@@ -300,4 +333,119 @@ class SpaceXRepositoryTest {
 				thrown.getMessage());
 	}
 
+	@Test
+	void shouldReturnCorrectMissionSummary() {
+		// Given: data from the example in the task
+		// Missions
+		missionRepository.addMission(new Mission("Mars"));
+		missionRepository.addMission(new Mission("Luna1"));
+		missionRepository.addMission(new Mission("Double Landing"));
+		missionRepository.addMission(new Mission("Transit"));
+		missionRepository.addMission(new Mission("Luna2"));
+		missionRepository.addMission(new Mission("Vertical Landing"));
+
+		// Rockets
+		rocketRepository.addRocket(new Rocket("Dragon 1"));
+		rocketRepository.addRocket(new Rocket("Dragon 2"));
+		rocketRepository.addRocket(new Rocket("Red Dragon"));
+		rocketRepository.addRocket(new Rocket("Dragon XL"));
+		rocketRepository.addRocket(new Rocket("Falcon Heavy"));
+
+		// Assignments and status changes
+		spaceXRepository.assignRocketToMission("Dragon 1", "Luna1");
+		spaceXRepository.assignRocketToMission("Dragon 2", "Luna1");
+		spaceXRepository.assignRocketToMission("Red Dragon", "Transit");
+		spaceXRepository.assignRocketToMission("Dragon XL", "Transit");
+		spaceXRepository.assignRocketToMission("Falcon Heavy", "Transit");
+
+		spaceXRepository.changeRocketStatus("Dragon XL", RocketStatus.IN_SPACE);
+		spaceXRepository.changeRocketStatus("Falcon Heavy", RocketStatus.IN_SPACE);
+		spaceXRepository.changeMissionStatus("Transit", MissionStatus.IN_PROGRESS);
+
+		missionRepository.findByName("Double Landing").get().setStatus(MissionStatus.ENDED);
+		missionRepository.findByName("Vertical Landing").get().setStatus(MissionStatus.ENDED);
+
+		// When: generating the summary
+		List<String> summary = spaceXRepository.getMissionSummary();
+
+		// Then: verify the summary matches the expected output
+		List<String> expectedSummary = List.of(
+				"Transit - IN_PROGRESS - Dragons: 3",
+				"\t- Red Dragon - ON_GROUND",
+				"\t- Dragon XL - IN_SPACE",
+				"\t- Falcon Heavy - IN_SPACE",
+				"Luna1 - SCHEDULED - Dragons: 2",
+				"\t- Dragon 1 - ON_GROUND",
+				"\t- Dragon 2 - ON_GROUND",
+				"Vertical Landing - ENDED - Dragons: 0",
+				"Mars - SCHEDULED - Dragons: 0",
+				"Luna2 - SCHEDULED - Dragons: 0",
+				"Double Landing - ENDED - Dragons: 0");
+
+		assertEquals(expectedSummary.size(), summary.size());
+		for (int i = 0; i < expectedSummary.size(); i++) {
+			assertEquals(expectedSummary.get(i), summary.get(i));
+		}
+	}
+
+	@Test
+	void shouldRemoveRocketSuccessfully() {
+		// Given: a rocket not assigned to any mission
+		String rocketName = "Falcon 1";
+		rocketRepository.addRocket(new Rocket(rocketName));
+
+		// When: attempting to remove the rocket
+		spaceXRepository.removeRocket(rocketName);
+
+		// Then: the rocket should no longer be in the repository
+		Optional<Rocket> removedRocket = rocketRepository.findByName(rocketName);
+		assertTrue(removedRocket.isEmpty());
+	}
+
+	@Test
+	void shouldThrowExceptionWhenRemovingAssignedRocket() {
+		// Given: a rocket assigned to a mission
+		String rocketName = "Falcon 9";
+		String missionName = "Mars";
+		rocketRepository.addRocket(new Rocket(rocketName));
+		missionRepository.addMission(new Mission(missionName));
+		spaceXRepository.assignRocketToMission(rocketName, missionName);
+
+		// When & Then: attempting to remove the rocket, an exception should be thrown
+		IllegalArgumentException thrown = assertThrows(
+				IllegalArgumentException.class,
+				() -> spaceXRepository.removeRocket(rocketName));
+		assertEquals("Cannot remove rocket '" + rocketName + "' as it is currently assigned to mission '" + missionName
+				+ "'.", thrown.getMessage());
+	}
+
+	@Test
+	void shouldRemoveMissionSuccessfully() {
+		// Given: a mission with no assigned rockets
+		String missionName = "New Mission";
+		missionRepository.addMission(new Mission(missionName));
+
+		// When: attempting to remove the mission
+		spaceXRepository.removeMission(missionName);
+
+		// Then: the mission should no longer be in the repository
+		Optional<Mission> removedMission = missionRepository.findByName(missionName);
+		assertTrue(removedMission.isEmpty());
+	}
+
+	@Test
+	void shouldThrowExceptionWhenRemovingMissionWithAssignedRockets() {
+		// Given: a mission with an assigned rocket
+		String missionName = "Jupiter";
+		String rocketName = "Starship";
+		missionRepository.addMission(new Mission(missionName));
+		rocketRepository.addRocket(new Rocket(rocketName));
+		spaceXRepository.assignRocketToMission(rocketName, missionName);
+
+		// When & Then: attempting to remove the mission, an exception should be thrown
+		IllegalArgumentException thrown = assertThrows(
+				IllegalArgumentException.class,
+				() -> spaceXRepository.removeMission(missionName));
+		assertEquals("Cannot remove mission '" + missionName + "' as it has assigned rockets.", thrown.getMessage());
+	}
 }
