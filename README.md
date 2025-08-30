@@ -7,11 +7,12 @@ It allows users to track the status of SpaceX rockets and missions, assign rocke
 The solution is built with a focus on clean code, object-oriented design, and adherence to SOLID principles, using a Test-Driven Development (TDD) approach.
 
 ## Architecture and design
-**1. Separation of Concerns.** The library is designed using the **Repository** pattern to separate data access logic from business logic:  
-* **RocketRepository** — manages a collection of **Rocket** objects.
-* **MissionRepository** — manages a collection of **Mission** objects.
-* **SpaceXRepository** — This is a **facade** class that provides the main interface of the library.  
-It encapsulates business logic (e.g. assigning rockets to missions, changing statuses) and uses underlying repositories to interact with data.  
+**1. Separation of Concerns and Service Layer.** The library is designed using the **Repository** pattern to separate data access logic from business logic:  
+* **RocketRepository:** manages a collection of **Rocket** objects.
+* **MissionRepository:** manages a collection of **Mission** objects.
+* **RocketService:** encapsulates all business logic related to **Rocket** objects.
+* **MissionService:** encapsulates all business logic related to **Mission** objects.
+* **SpaceXManager:** this is a **facade** class that provides the main public interface for the library. It delegates all requests to the appropriate service.  
   
 **2. In-Memory Store:**  
 * All data is stored in memory using standard Java collections (**HashMap**).  
@@ -20,9 +21,13 @@ It encapsulates business logic (e.g. assigning rockets to missions, changing sta
 * The entire code was developed following Test-Driven Development.  
 Each feature began with a failing test, followed by the minimal code required to make it pass.  
   
-**4. Exception Handling:**  
-* The library uses **IllegalArgumentException** to handle invalid operations (e.g., adding a duplicate name, assigning a rocket to an "Ended" mission).
-
+**4. Custom Exception Handling.** The library uses custom exceptions to provide clearer error messages and better control over error handling.  
+* **RocketNotFoundException**
+* **MissionNotFoundException**
+* **RocketAlreadyAssignedException**
+* **InvalidStatusTransitionException**
+* **MissionHasAssignedRocketsException**  
+  
 ## Key Features
 **1. Object management:**  
 * Rocket Management: Adding new rockets with name uniqueness check. Removing rockets from the repository based on specific conditions.  
@@ -35,7 +40,8 @@ Each feature began with a failing test, followed by the minimal code required to
   
 **3. Status management:**  
 * Manually change the status of a rocket ("On ground", "In space", "In repair").  
-* Manually change the status of a mission ("Scheduled", "Pending", "In progress", "Ended") with strict checks.  
+* Manually change the status of a mission ("Scheduled", "Pending", "In progress", "Ended") with strict checks.
+* The enum status values includes a user-friendly display name.  
   
 **4. Reporting:**  
 * Get a summary of all missions, sorted by the number of assigned rockets (descending) and then by mission name (descending alphabetical order).  
@@ -72,39 +78,50 @@ The rocket "knows" what mission it belongs to, and the mission contains a list o
 ## Using the library
 
 * The library can be integrated into any Java project by including the compiled **.jar** file.  
+To use the library, you need to instantiate the repositories and services, and then create a **SpaceXManager** instance, which serves as the public facade.  
   
 
-* Initializing repositories:  
+* Initialize repositories:  
 
 ```
 RocketRepository rocketRepository = new RocketRepository();
 MissionRepository missionRepository = new MissionRepository();
-SpaceXRepository spaceXRepository = new SpaceXRepository(rocketRepository, missionRepository);
+```
+* Initialize services with their dependencies:  
+
+```
+RocketService rocketService = new RocketService(rocketRepository, missionRepository);
+MissionService missionService = new MissionService(missionRepository, rocketRepository);
+```
+* Initialize the facade:  
+
+```
+SpaceXManager spaceXManager = new SpaceXManager(rocketService, missionService);
 ```
 * Adding new rockets and missions:
 
 ```
-rocketRepository.addRocket(new Rocket("Falcon 9"));
-rocketRepository.addRocket(new Rocket("Starship"));
-missionRepository.addMission(new Mission("Mars Landing"));
-missionRepository.addMission(new Mission("ISS Resupply"));
+spaceXManager.addRocket(new Rocket("Falcon 9"));
+spaceXManager.addRocket(new Rocket("Starship"));
+spaceXManager.addMission(new Mission("Mars Landing"));
+spaceXManager.addMission(new Mission("ISS Resupply"));
 ```
 * Assigning a rocket to a mission:
 
 ```
-spaceXRepository.assignRocketToMission("Falcon 9", "Mars Landing");
-spaceXRepository.assignRocketToMission("Starship", "ISS Resupply");
+spaceXManager.assignRocketToMission("Falcon 9", "Mars Landing");
+spaceXManager.assignRocketToMission("Starship", "ISS Resupply");
 ```
 * Manually changing statuses:
 
 ```
-spaceXRepository.changeRocketStatus("Falcon 9", RocketStatus.IN_SPACE);
-spaceXRepository.changeMissionStatus("Mars Landing", MissionStatus.IN_PROGRESS);
+spaceXManager.changeRocketStatus("Falcon 9", RocketStatus.IN_SPACE);
+spaceXManager.changeMissionStatus("Mars Landing", MissionStatus.IN_PROGRESS);
 ```
 * Generate and print summary report:
 
 ```
-List<String> summary = spaceXRepository.getMissionSummary();
+List<String> summary = spaceXManager.getMissionSummary();
 summary.forEach(System.out::println);
 ```
 
@@ -112,3 +129,7 @@ summary.forEach(System.out::println);
 * Java 17
 * Maven
 * JUnit 5
+* Mockito (for testing)
+
+## Learn More
+* list of changes and updates: [Changelog](CHANGELOG.md)
