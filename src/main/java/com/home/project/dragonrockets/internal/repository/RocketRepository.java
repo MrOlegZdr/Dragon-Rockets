@@ -1,10 +1,10 @@
-package com.home.project.dragonrockets.repository;
+package com.home.project.dragonrockets.internal.repository;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import com.home.project.dragonrockets.model.Rocket;
+import com.home.project.dragonrockets.internal.model.Rocket;
 
 public class RocketRepository {
 

@@ -1,4 +1,4 @@
-package com.home.project.dragonrockets.model;
+package com.home.project.dragonrockets.internal.model;
 
 import java.util.ArrayList;
 import java.util.List;

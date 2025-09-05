@@ -2,12 +2,12 @@ package com.home.project.dragonrockets;
 
 import java.util.List;
 
-import com.home.project.dragonrockets.model.Mission;
-import com.home.project.dragonrockets.model.MissionStatus;
-import com.home.project.dragonrockets.model.Rocket;
-import com.home.project.dragonrockets.model.RocketStatus;
-import com.home.project.dragonrockets.service.MissionService;
-import com.home.project.dragonrockets.service.RocketService;
+import com.home.project.dragonrockets.internal.model.Mission;
+import com.home.project.dragonrockets.internal.model.MissionStatus;
+import com.home.project.dragonrockets.internal.model.Rocket;
+import com.home.project.dragonrockets.internal.model.RocketStatus;
+import com.home.project.dragonrockets.internal.service.MissionService;
+import com.home.project.dragonrockets.internal.service.RocketService;
 
 public class SpaceXManager {
 

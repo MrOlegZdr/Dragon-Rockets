@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2025-09-05
+
+### Changed
+* The entire internal structure has been transferred to the **internal.*** package for future facade changes.
+
 ## [1.1.0] - 2025-08-30
 
 ### Added

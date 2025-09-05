@@ -8,17 +8,17 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.home.project.dragonrockets.exception.InvalidStatusTransitionException;
-import com.home.project.dragonrockets.exception.MissionHasAssignedRocketsException;
-import com.home.project.dragonrockets.exception.RocketAlreadyAssignedException;
-import com.home.project.dragonrockets.model.Mission;
-import com.home.project.dragonrockets.model.MissionStatus;
-import com.home.project.dragonrockets.model.Rocket;
-import com.home.project.dragonrockets.model.RocketStatus;
-import com.home.project.dragonrockets.repository.MissionRepository;
-import com.home.project.dragonrockets.repository.RocketRepository;
-import com.home.project.dragonrockets.service.MissionService;
-import com.home.project.dragonrockets.service.RocketService;
+import com.home.project.dragonrockets.internal.exception.InvalidStatusTransitionException;
+import com.home.project.dragonrockets.internal.exception.MissionHasAssignedRocketsException;
+import com.home.project.dragonrockets.internal.exception.RocketAlreadyAssignedException;
+import com.home.project.dragonrockets.internal.model.Mission;
+import com.home.project.dragonrockets.internal.model.MissionStatus;
+import com.home.project.dragonrockets.internal.model.Rocket;
+import com.home.project.dragonrockets.internal.model.RocketStatus;
+import com.home.project.dragonrockets.internal.repository.MissionRepository;
+import com.home.project.dragonrockets.internal.repository.RocketRepository;
+import com.home.project.dragonrockets.internal.service.MissionService;
+import com.home.project.dragonrockets.internal.service.RocketService;
 
 class SpaceXManagerTest {
 

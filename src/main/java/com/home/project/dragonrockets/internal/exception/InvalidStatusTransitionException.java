@@ -1,4 +1,4 @@
-package com.home.project.dragonrockets.exception;
+package com.home.project.dragonrockets.internal.exception;
 
 public class InvalidStatusTransitionException extends RuntimeException {
 

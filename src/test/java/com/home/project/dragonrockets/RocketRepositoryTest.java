@@ -7,9 +7,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.home.project.dragonrockets.model.Rocket;
-import com.home.project.dragonrockets.model.RocketStatus;
-import com.home.project.dragonrockets.repository.RocketRepository;
+import com.home.project.dragonrockets.internal.model.Rocket;
+import com.home.project.dragonrockets.internal.model.RocketStatus;
+import com.home.project.dragonrockets.internal.repository.RocketRepository;
 
 class RocketRepositoryTest {
 
