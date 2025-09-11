@@ -78,25 +78,13 @@ The rocket "knows" what mission it belongs to, and the mission contains a list o
 ## Using the library
 
 * The library can be integrated into any Java project by including the compiled **.jar** file.  
-To use the library, you need to instantiate the repositories and services, and then create a **SpaceXManager** instance, which serves as the public facade.  
+To use the library, you only need to create a **SpaceXManager** instance, which serves as the public facade.  
   
 
-* Initialize repositories:  
-
-```
-RocketRepository rocketRepository = new RocketRepository();
-MissionRepository missionRepository = new MissionRepository();
-```
-* Initialize services with their dependencies:  
-
-```
-RocketService rocketService = new RocketService(rocketRepository, missionRepository);
-MissionService missionService = new MissionService(missionRepository, rocketRepository);
-```
 * Initialize the facade:  
 
 ```
-SpaceXManager spaceXManager = new SpaceXManager(rocketService, missionService);
+SpaceXManager spaceXManager = new SpaceXManager();
 ```
 * Adding new rockets and missions:
 

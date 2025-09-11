@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2025-09-11
+
+### Added
+* Introduced new Facade Constructor **SpaceXManager()**. Now facade uses a simplified constructor with no external dependencies.
+* New method **getRocketInfo** to display information about rocket by its name.
+* Added tests for the new facade's methods and the services to ensure comprehensive coverage and stability.
+
+### Changed
+* Refactored **SpaceXManager** facade to handle the initialization of **RocketService** and **MissionService** internally. This removes the responsibility of dependency injection from the user, simplifying the library's public API.
+* Updated all existing tests to reflect the new **SpaceXManager** initialization.
+
+### Removed
+* The original **SpaceXRepository(RocketService rocketService, MissionService missionService)** constructor.
+
 ## [1.1.1] - 2025-09-05
 
 ### Changed

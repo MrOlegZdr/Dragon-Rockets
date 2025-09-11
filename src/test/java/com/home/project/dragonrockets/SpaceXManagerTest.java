@@ -2,41 +2,29 @@ package com.home.project.dragonrockets;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.home.project.dragonrockets.internal.exception.InvalidStatusTransitionException;
 import com.home.project.dragonrockets.internal.exception.MissionHasAssignedRocketsException;
+import com.home.project.dragonrockets.internal.exception.MissionNotFoundException;
 import com.home.project.dragonrockets.internal.exception.RocketAlreadyAssignedException;
+import com.home.project.dragonrockets.internal.exception.RocketNotFoundException;
 import com.home.project.dragonrockets.internal.model.Mission;
 import com.home.project.dragonrockets.internal.model.MissionStatus;
 import com.home.project.dragonrockets.internal.model.Rocket;
 import com.home.project.dragonrockets.internal.model.RocketStatus;
-import com.home.project.dragonrockets.internal.repository.MissionRepository;
-import com.home.project.dragonrockets.internal.repository.RocketRepository;
-import com.home.project.dragonrockets.internal.service.MissionService;
-import com.home.project.dragonrockets.internal.service.RocketService;
 
 class SpaceXManagerTest {
 
 	private SpaceXManager spaceXManager;
-	private RocketRepository rocketRepository;
-	private MissionRepository missionRepository;
-	private RocketService rocketService;
-	private MissionService missionService;
 
 	@BeforeEach
 	void setUp() {
-		rocketRepository = new RocketRepository();
-		missionRepository = new MissionRepository();
-
-		rocketService = new RocketService(rocketRepository, missionRepository);
-		missionService = new MissionService(missionRepository, rocketRepository);
-
-		spaceXManager = new SpaceXManager(rocketService, missionService);
+		spaceXManager = new SpaceXManager();
 	}
 
 	@Test
@@ -44,27 +32,23 @@ class SpaceXManagerTest {
 		// Given: a new rocket and a new mission
 		String rocketName = "Falcon 9";
 		String missionName = "Mars";
-		spaceXManager.addRocket(new Rocket(rocketName));
-		spaceXManager.addMission(new Mission(missionName));
+		Rocket rocket = new Rocket(rocketName);
+		Mission mission = new Mission(missionName);
+
+		spaceXManager.addRocket(rocket);
+		spaceXManager.addMission(mission);
 
 		// When: assigning the rocket to the mission
 		spaceXManager.assignRocketToMission(rocketName, missionName);
 
-		// Then: verify the assignment and status changes
-		Optional<Rocket> assignedRocketOptional = rocketRepository.findByName(rocketName);
-		assertTrue(assignedRocketOptional.isPresent());
-
-		Rocket assignedRocket = assignedRocketOptional.get();
+		Rocket assignedRocket = mission.getAssignedRockets().get(0);
 		assertEquals(RocketStatus.ON_GROUND, assignedRocket.getStatus());
 		assertEquals(missionName, assignedRocket.getAssignedMissionName());
+		assertEquals(missionName, rocket.getAssignedMissionName());
 
-		Optional<Mission> updatedMissionOptional = missionRepository.findByName(missionName);
-		assertTrue(updatedMissionOptional.isPresent());
-
-		Mission updatedMission = updatedMissionOptional.get();
-		assertEquals(1, updatedMission.getAssignedRockets().size());
-		assertEquals(RocketStatus.ON_GROUND, updatedMission.getAssignedRockets().get(0).getStatus());
-		assertEquals(MissionStatus.SCHEDULED, updatedMission.getStatus());
+		assertEquals(1, mission.getAssignedRockets().size());
+		assertEquals(RocketStatus.ON_GROUND, mission.getAssignedRockets().get(0).getStatus());
+		assertEquals(MissionStatus.SCHEDULED, mission.getStatus());
 	}
 
 	@Test
@@ -109,25 +93,26 @@ class SpaceXManagerTest {
 		// Given: a rocket assigned to a mission
 		String rocketName = "Dragon 1";
 		String missionName = "Mars";
-		spaceXManager.addRocket(new Rocket(rocketName));
-		spaceXManager.addMission(new Mission(missionName));
+		Rocket rocket = new Rocket(rocketName);
+		Mission mission = new Mission(missionName);
+
+		spaceXManager.addRocket(rocket);
+		spaceXManager.addMission(mission);
 		spaceXManager.assignRocketToMission(rocketName, missionName);
+
+		// Checking rocket assigning
+		assertEquals(missionName, rocket.getAssignedMissionName());
+		assertEquals(1, mission.getAssignedRockets().size());
+		assertEquals("Mars", rocket.getAssignedMissionName());
 
 		// When: un-assigning the rocket
 		spaceXManager.unassignRocketFromMission(rocketName);
 
-		// Then: the rocket should be unassigned and its status should be ON_GROUND
-		Optional<Rocket> unassignedRocketOptional = rocketRepository.findByName(rocketName);
-		assertTrue(unassignedRocketOptional.isPresent());
-		Rocket unassignedRocket = unassignedRocketOptional.get();
-		assertNull(unassignedRocket.getAssignedMissionName());
-		assertEquals(RocketStatus.ON_GROUND, unassignedRocket.getStatus());
-
-		Optional<Mission> missionOptional = missionRepository.findByName(missionName);
-		assertTrue(missionOptional.isPresent());
-		Mission mission = missionOptional.get();
+		// Then: the rocket should be unassigned
 		assertNotNull(mission);
 		assertEquals(0, mission.getAssignedRockets().size());
+		assertEquals(null, rocket.getAssignedMissionName());
+
 	}
 
 	@Test
@@ -147,18 +132,16 @@ class SpaceXManagerTest {
 	void shouldChangeRocketStatus() {
 		// Given: a rocket with 'ON_GROUND' status
 		String rocketName = "Starship";
-		spaceXManager.addRocket(new Rocket(rocketName));
+		Rocket rocket = new Rocket(rocketName);
+		spaceXManager.addRocket(rocket);
+
+		assertEquals(RocketStatus.ON_GROUND, rocket.getStatus());
 
 		// When: changing its status to 'IN_REPAIR'
 		spaceXManager.changeRocketStatus(rocketName, RocketStatus.IN_REPAIR);
 
 		// Then: the status should be updated
-		Optional<Rocket> updatedRocketOptional = rocketRepository.findByName(rocketName);
-		assertTrue(updatedRocketOptional.isPresent());
-
-		Rocket updatedRocket = updatedRocketOptional.get();
-		assertNotNull(updatedRocket);
-		assertEquals(RocketStatus.IN_REPAIR, updatedRocket.getStatus());
+		assertEquals(RocketStatus.IN_REPAIR, rocket.getStatus());
 	}
 
 	@Test
@@ -167,9 +150,13 @@ class SpaceXManagerTest {
 		String missionName = "Luna 2";
 		String rocket1Name = "Dragon 1";
 		String rocket2Name = "Dragon 2";
-		spaceXManager.addMission(new Mission(missionName));
-		spaceXManager.addRocket(new Rocket(rocket1Name));
-		spaceXManager.addRocket(new Rocket(rocket2Name));
+		Rocket rocket1 = new Rocket(rocket1Name);
+		Rocket rocket2 = new Rocket(rocket2Name);
+		Mission mission = new Mission(missionName);
+
+		spaceXManager.addMission(mission);
+		spaceXManager.addRocket(rocket1);
+		spaceXManager.addRocket(rocket2);
 		spaceXManager.assignRocketToMission(rocket1Name, missionName);
 		spaceXManager.assignRocketToMission(rocket2Name, missionName);
 
@@ -177,12 +164,7 @@ class SpaceXManagerTest {
 		spaceXManager.changeRocketStatus(rocket1Name, RocketStatus.IN_REPAIR);
 
 		// Then: the mission status should automatically change to 'PENDING'
-		Optional<Mission> updatedMissionOptional = missionRepository.findByName(missionName);
-		assertTrue(updatedMissionOptional.isPresent());
-
-		Mission updatedMission = updatedMissionOptional.get();
-		assertNotNull(updatedMission);
-		assertEquals(MissionStatus.PENDING, updatedMission.getStatus());
+		assertEquals(MissionStatus.PENDING, mission.getStatus());
 	}
 
 	@Test
@@ -191,24 +173,24 @@ class SpaceXManagerTest {
 		String missionName = "Luna 3";
 		String rocket1Name = "Dragon 3";
 		String rocket2Name = "Dragon 4";
-		spaceXManager.addMission(new Mission(missionName));
-		spaceXManager.addRocket(new Rocket(rocket1Name));
-		spaceXManager.addRocket(new Rocket(rocket2Name));
+		Rocket rocket1 = new Rocket(rocket1Name);
+		Rocket rocket2 = new Rocket(rocket2Name);
+		Mission mission = new Mission(missionName);
+
+		spaceXManager.addMission(mission);
+		spaceXManager.addRocket(rocket1);
+		spaceXManager.addRocket(rocket2);
 		spaceXManager.assignRocketToMission(rocket1Name, missionName);
 		spaceXManager.assignRocketToMission(rocket2Name, missionName);
 		spaceXManager.changeRocketStatus(rocket1Name, RocketStatus.IN_REPAIR); // Mission status is now Pending
+		assertEquals(MissionStatus.PENDING, mission.getStatus());
 
 		// When: the other rocket changes status to 'IN_SPACE'
 		spaceXManager.changeRocketStatus(rocket2Name, RocketStatus.IN_SPACE);
 
 		// Then: the mission status should remain 'PENDING' because the first rocket is
 		// still in repair
-		Optional<Mission> updatedMissionOptional = missionRepository.findByName(missionName);
-		assertTrue(updatedMissionOptional.isPresent());
-
-		Mission updatedMission = updatedMissionOptional.get();
-		assertNotNull(updatedMission);
-		assertEquals(MissionStatus.PENDING, updatedMission.getStatus());
+		assertEquals(MissionStatus.PENDING, mission.getStatus());
 	}
 
 	@Test
@@ -216,13 +198,13 @@ class SpaceXManagerTest {
 		// Given: a mission with assigned rocket
 		String missionName = "Mars";
 		String rocketName = "Falcon 9";
-		spaceXManager.addMission(new Mission(missionName));
-		spaceXManager.addRocket(new Rocket(rocketName));
+		Rocket rocket = new Rocket(rocketName);
+		Mission mission = new Mission(missionName);
+
+		spaceXManager.addMission(mission);
+		spaceXManager.addRocket(rocket);
 
 		// Check initial status SCHEDULED
-		Optional<Mission> missionOptional = missionRepository.findByName(missionName);
-		assertTrue(missionOptional.isPresent());
-		Mission mission = missionOptional.get();
 		assertEquals(MissionStatus.SCHEDULED, mission.getStatus());
 
 		spaceXManager.assignRocketToMission(rocketName, missionName);
@@ -231,11 +213,7 @@ class SpaceXManagerTest {
 		spaceXManager.changeMissionStatus(missionName, MissionStatus.IN_PROGRESS);
 
 		// Then: the status should be updated
-		Optional<Mission> updatedMissionOptional = missionRepository.findByName(missionName);
-		assertTrue(updatedMissionOptional.isPresent());
-		Mission updatedMission = updatedMissionOptional.get();
-		assertNotNull(updatedMission);
-		assertEquals(MissionStatus.IN_PROGRESS, updatedMission.getStatus());
+		assertEquals(MissionStatus.IN_PROGRESS, mission.getStatus());
 	}
 
 	@Test
@@ -260,22 +238,16 @@ class SpaceXManagerTest {
 	void shouldChangeMissionStatusToEndedWhenNoRocketsAreAssigned() {
 		// Given: a mission with no rockets assigned
 		String missionName = "Interstellar";
-		spaceXManager.addMission(new Mission(missionName));
+		Mission mission = new Mission(missionName);
+		spaceXManager.addMission(mission);
 
-		Optional<Mission> missionOptional = missionRepository.findByName(missionName);
-		assertTrue(missionOptional.isPresent());
-		Mission mission = missionOptional.get();
 		assertEquals(MissionStatus.SCHEDULED, mission.getStatus());
 
 		// When: changing its status to ENDED
 		spaceXManager.changeMissionStatus(missionName, MissionStatus.ENDED);
 
 		// Then: the status should be updated
-		Optional<Mission> updatedMissionOptional = missionRepository.findByName(missionName);
-		assertTrue(updatedMissionOptional.isPresent());
-		Mission updatedMission = updatedMissionOptional.get();
-		assertNotNull(updatedMission);
-		assertEquals(MissionStatus.ENDED, updatedMission.getStatus());
+		assertEquals(MissionStatus.ENDED, mission.getStatus());
 	}
 
 	@Test
@@ -283,19 +255,22 @@ class SpaceXManagerTest {
 		// Given: a mission with one assigned rocket
 		String missionName = "Moon Landing";
 		String rocketName = "Starship 1";
-		spaceXManager.addRocket(new Rocket(rocketName));
-		spaceXManager.addMission(new Mission(missionName));
+		Rocket rocket = new Rocket(rocketName);
+		Mission mission = new Mission(missionName);
+
+		spaceXManager.addRocket(rocket);
+		spaceXManager.addMission(mission);
 		spaceXManager.assignRocketToMission(rocketName, missionName);
+		assertEquals(1, mission.getAssignedRockets().size());
 
 		// When: un-assigning the last rocket and then changing mission status to Ended
 		spaceXManager.unassignRocketFromMission(rocketName);
 		spaceXManager.changeMissionStatus(missionName, MissionStatus.ENDED);
 
 		// Then: the mission status should be updated successfully
-		Optional<Mission> updatedMissionOptional = missionRepository.findByName(missionName);
-		Mission updatedMission = updatedMissionOptional.get();
-		assertNotNull(updatedMission);
-		assertEquals(MissionStatus.ENDED, updatedMission.getStatus());
+		assertNotNull(mission);
+		assertEquals(MissionStatus.ENDED, mission.getStatus());
+		assertEquals(0, mission.getAssignedRockets().size());
 	}
 
 	@Test
@@ -399,17 +374,32 @@ class SpaceXManagerTest {
 	}
 
 	@Test
+	void shouldReturnCorrectRocketInfo() {
+		String rocketName = "Falcon 1";
+		String missionName = "Mars";
+		Rocket rocket = new Rocket(rocketName);
+		Mission mission = new Mission(missionName);
+		spaceXManager.addRocket(rocket);
+		spaceXManager.addMission(mission);
+		spaceXManager.assignRocketToMission(rocketName, missionName);
+		spaceXManager.changeRocketStatus(rocketName, RocketStatus.IN_SPACE);
+		spaceXManager.changeMissionStatus(missionName, MissionStatus.IN_PROGRESS);
+		assertEquals("Falcon 1 - In Space - Mission: Mars", spaceXManager.getRocketInfo(rocketName));
+	}
+
+	@Test
 	void shouldRemoveRocketSuccessfully() {
 		// Given: a rocket not assigned to any mission
 		String rocketName = "Falcon 1";
-		spaceXManager.addRocket(new Rocket(rocketName));
+		Rocket rocket = new Rocket(rocketName);
+		spaceXManager.addRocket(rocket);
+		assertEquals("Falcon 1 - On Ground - Mission: NOT ASSIGNED", spaceXManager.getRocketInfo(rocketName));
 
 		// When: attempting to remove the rocket
 		spaceXManager.removeRocket(rocketName);
 
 		// Then: the rocket should no longer be in the repository
-		Optional<Rocket> removedRocket = rocketRepository.findByName(rocketName);
-		assertTrue(removedRocket.isEmpty());
+		assertThrows(RocketNotFoundException.class, () -> spaceXManager.getRocketInfo(rocketName));
 	}
 
 	@Test
@@ -434,13 +424,13 @@ class SpaceXManagerTest {
 		// Given: a mission with no assigned rockets
 		String missionName = "New Mission";
 		spaceXManager.addMission(new Mission(missionName));
+		assertEquals(Arrays.asList("New Mission - Scheduled - Dragons: 0"), spaceXManager.getMissionSummary());
 
 		// When: attempting to remove the mission
 		spaceXManager.removeMission(missionName);
 
 		// Then: the mission should no longer be in the repository
-		Optional<Mission> removedMission = missionRepository.findByName(missionName);
-		assertTrue(removedMission.isEmpty());
+		assertThrows(MissionNotFoundException.class, () -> spaceXManager.removeMission(missionName));
 	}
 
 	@Test

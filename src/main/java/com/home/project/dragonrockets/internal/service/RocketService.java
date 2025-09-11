@@ -30,6 +30,16 @@ public class RocketService {
 		return rocketRepository.findByName(rocketName);
 	}
 
+	public String getRocketInfo(String rocketName) {
+		Rocket rocket = rocketRepository.findByName(rocketName)
+				.orElseThrow(() -> new RocketNotFoundException("Rocket '" + rocketName + "' not found."));
+		String rocketInfo = String.format("%s - %s - Mission: %s",
+				rocket.getName(),
+				rocket.getStatus().getDisplayName(),
+				rocket.getAssignedMissionName() == null ? "NOT ASSIGNED" : rocket.getAssignedMissionName());
+		return rocketInfo;
+	}
+
 	public void changeRocketStatus(String rocketName, RocketStatus newStatus) {
 		Rocket rocket = rocketRepository.findByName(rocketName)
 				.orElseThrow(() -> new RocketNotFoundException("Rocket '" + rocketName + "' not found."));

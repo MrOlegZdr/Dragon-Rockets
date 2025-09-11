@@ -130,4 +130,34 @@ class RocketServiceTest {
 		verify(rocketRepository, never()).remove(rocketName);
 		assertThrows(RocketAlreadyAssignedException.class, () -> rocketService.removeRocket(rocketName));
 	}
+
+	@Test
+	void shouldDisplayRocketInfoWithAssignedMissionSuccessfully() {
+		String rocketName = "Starship";
+		String missionName = "ISS Mission";
+		Rocket mockRocket = new Rocket(rocketName);
+		Mission mockMission = new Mission(missionName);
+
+		mockRocket.setAssignedMissionName(missionName);
+		mockMission.getAssignedRockets().add(mockRocket);
+
+		when(rocketRepository.findByName(rocketName)).thenReturn(Optional.of(mockRocket));
+		when(missionRepository.findByName(missionName)).thenReturn(Optional.of(mockMission));
+
+		String rocketInfo = rocketService.getRocketInfo(rocketName);
+
+		assertEquals("Starship - On Ground - Mission: ISS Mission", rocketInfo);
+	}
+
+	@Test
+	void shouldDisplayRocketInfoWithoutAssignedMissionSuccessfully() {
+		String rocketName = "Starship";
+		Rocket mockRocket = new Rocket(rocketName);
+
+		when(rocketRepository.findByName(rocketName)).thenReturn(Optional.of(mockRocket));
+
+		String rocketInfo = rocketService.getRocketInfo(rocketName);
+
+		assertEquals("Starship - On Ground - Mission: NOT ASSIGNED", rocketInfo);
+	}
 }
